@@ -1,4 +1,4 @@
-###Terraform 
+###Terraform
 # Local .terraform directories
 **/.terraform/*
 *.tfstate
@@ -15,7 +15,6 @@ override.tf.json
 terraform.rc
 
 # Custom Guest Configs
-policies/Guest Configuration/CGC_*.json
 scripts/dsc_examples/*/
 scripts/definitionList.json
 

@@ -7,14 +7,11 @@ module "configure_asc_initiative" {
   initiative_display_name = "[Security]: Configure Azure Security Center"
   initiative_description  = "Deploys and configures Azure Security Center settings and defines exports"
   initiative_category     = "Security Center"
-  management_group        = data.azurerm_management_group.org.name
+  management_group_id     = data.azurerm_management_group.org.id
 
   member_definitions = [
-    module.configure_asc["auto_enroll_subscriptions"].definition,
-    module.configure_asc["auto_provision_log_analytics_agent_custom_workspace"].definition,
-    module.configure_asc["auto_set_contact_details"].definition,
-    module.configure_asc["export_asc_alerts_and_recommendations_to_eventhub"].definition,
-    module.configure_asc["export_asc_alerts_and_recommendations_to_log_analytics"].definition,
+    for asc in module.configure_asc :
+    asc.definition
   ]
 }
 
@@ -27,7 +24,8 @@ module "platform_diagnostics_initiative" {
   initiative_display_name = "[Platform]: Diagnostics Settings Policy Initiative"
   initiative_description  = "Collection of policies that deploy resource and activity log forwarders to logging core resources"
   initiative_category     = "Monitoring"
-  management_group        = data.azurerm_management_group.org.name
+  merge_effects           = false # will not merge "effect" parameters
+  management_group_id     = data.azurerm_management_group.org.id
 
   member_definitions = [
     module.deploy_subscription_diagnostic_setting.definition,

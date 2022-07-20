@@ -1,4 +1,4 @@
-variable management_group {
+variable management_group_id {
   type        = string
   description = "The management group scope at which the initiative will be defined. Defaults to current Subscription if omitted. Changing this forces a new resource to be created. Note: if you are using azurerm_management_group to assign a value to management_group_id, be sure to use name or group_id attribute, but not id."
   default     = null
@@ -52,26 +52,47 @@ variable member_definitions {
   description = "Policy Defenition resource nodes that will be members of this initiative"
 }
 
+variable initiative_metadata {
+  type        = any
+  description = "The metadata for the policy initiative. This is a JSON object representing additional metadata that should be stored with the policy initiative. Omitting this will default to merge var.initiative_category and var.initiative_version"
+  default     = null
+}
+
+variable merge_effects {
+  type        = bool
+  description = "Should the module merge definition effects. Defauls to true"
+  default     = true
+}
+
 locals {
-  parameters = {
+  # colate all definition parameters into a single object
+  member_parameters = {
     for d in var.member_definitions :
     d.name => try(jsondecode(d.parameters), null)
   }
 
-  # combine all discovered definition parameters using interpolation
-  all_parameters = jsonencode(merge(values(local.parameters)...))
+  # combine all discovered definition parameters using interpolation and suffix effects with definition references
+  parameters = merge(values({
+    for definition, params in local.member_parameters :
+    definition => {
+      for parameter_name, parameter_value in params :
+      parameter_name == "effect" && var.merge_effects == false ? format("%s_%s", parameter_name, replace(substr(title(replace(definition, "/-|_|\\s/", " ")), 0, 64), "/\\s/", "")) : parameter_name => parameter_value
+    }
+  })...)
+
+  #TODO: parameter_value.metadata.displayName should also contain definition reference if merge_effects == false
 
   # get role definition IDs
   role_definition_ids = {
     for d in var.member_definitions :
-    d.id => try(jsondecode(d.policy_rule).then.details.roleDefinitionIds, [])
+    d.name => try(jsondecode(d.policy_rule).then.details.roleDefinitionIds, [])
   }
 
   # combine all discovered role definition IDs
-  all_role_definition_ids = distinct([for v in flatten(values(local.role_definition_ids)) : lower(v)])
+  all_role_definition_ids = try(distinct([for v in flatten(values(local.role_definition_ids)) : lower(v)]), [])
 
-  metadata = jsonencode(merge(
-    { category = var.initiative_category },
-    { version = var.initiative_version },
-  ))
+  metadata = coalesce(var.initiative_metadata, merge({ category = var.initiative_category },{ version = var.initiative_version }))
+
+  # manually generate the initiative Id to prevent "Invalid for_each argument" on potential consumer modules
+  initiative_id = var.management_group_id != null ? "${var.management_group_id}/providers/Microsoft.Authorization/policySetDefinitions/${var.initiative_name}" : azurerm_policy_set_definition.set.id
 }

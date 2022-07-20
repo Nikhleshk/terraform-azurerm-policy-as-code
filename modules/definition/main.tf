@@ -1,15 +1,15 @@
 resource azurerm_policy_definition def {
-  name         = var.policy_name
+  name         = local.policy_name
   display_name = local.display_name
   description  = local.description
   policy_type  = "Custom"
   mode         = var.policy_mode
 
-  management_group_id = var.management_group
+  management_group_id = var.management_group_id
 
-  policy_rule = jsonencode(local.policy_rule)
+  metadata    = jsonencode(local.metadata)
   parameters  = jsonencode(local.parameters)
-  metadata    = local.metadata
+  policy_rule = jsonencode(local.policy_rule)
 
   lifecycle {
     create_before_destroy = true

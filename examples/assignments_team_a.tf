@@ -6,6 +6,7 @@ module "team_a_mg_deny_resources_types" {
   definition        = module.deny_resources_types.definition
   assignment_scope  = data.azurerm_management_group.team_a.id
   assignment_effect = "Audit"
+
   assignment_parameters = {
     listOfResourceTypesNotAllowed = [
       "Microsoft.Storage/operations",
@@ -32,13 +33,14 @@ module "team_a_mg_deny_nic_public_ip" {
 ##################
 # Tags
 ##################
-
 module "team_a_mg_inherit_resource_group_tags_modify" {
   source            = "..//modules/def_assignment"
   definition        = module.inherit_resource_group_tags_modify.definition
   assignment_scope  = data.azurerm_management_group.team_a.id
   assignment_effect = "Modify"
   skip_remediation  = var.skip_remediation
+  remediation_scope = data.azurerm_subscription.current.id # change the scope of remediation tasks, defaults to assignment_scope
+
   assignment_parameters = {
     tagName = "environment"
   }

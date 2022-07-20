@@ -51,7 +51,11 @@ foreach ($child in $definitionChildren) {
                 if ($param.Value.defaultValue) {
                     $thisParam | Add-Member -NotePropertyName "DefaultValue" -NotePropertyValue $param.Value.defaultValue
                 }
-                
+
+                if ($param.Value.allowedValues) {
+                    $thisParam | Add-Member -NotePropertyName "AllowedValues" -NotePropertyValue $param.Value.allowedValues
+                }
+
                 $paramsList += $thisParam
             }
 
@@ -64,7 +68,7 @@ foreach ($child in $definitionChildren) {
 }
 
 # Output to Mardown
-$heading = "`n# Local Policy Definitions"
+$heading = "`n# Custom Policy Definition Library"
 $file = "README.md"
 
 Write-Output "$heading" | Out-File -FilePath $file -Force
@@ -74,6 +78,7 @@ $append = @{
 }
 
 Write-Output "Compile time: $(Get-Date) UTC" | Out-File @append
+Write-Output "Example custom definitions located in the local library" | Out-File @append
 
 Write-Output "`n## Categories" | Out-File @append
 foreach ($definition in $definitionList.Keys) {
@@ -86,7 +91,7 @@ foreach ($definition in $definitionList.Keys) {
 
     foreach ($item in $definitionList[$definition]) {
 
-        Write-Output "`n### $($item.BaseName)"                                           | Out-File @append
+        Write-Output "`n### 📜 [$($item.BaseName)](./$($definition.Replace(" ","%20"))/$($item.BaseName).json)" | Out-File @append
         Write-Output "| Title | Description |"                                           | Out-File @append
         Write-Output "| ----- | ----------- |"                                           | Out-File @append
         Write-Output "| Name                | $($item.Name) |"                           | Out-File @append
@@ -96,12 +101,12 @@ foreach ($definition in $definitionList.Keys) {
 
 
         if ($item | Get-Member -MemberType "NoteProperty") {
-            Write-Output "`n#### ~ Parameters ($($item.BaseName))"                       | Out-File @append
-            Write-Output "| Name | Description | Default Value |"   | Out-File @append
-            Write-Output "| ---- | ----------- | ------------- |"   | Out-File @append
+            Write-Output "`n#### 🧮 ~ Parameters"                  | Out-File @append
+            Write-Output "| Name | Description | Default Value | Allowed Values |"   | Out-File @append
+            Write-Output "| ---- | ----------- | ------------- | -------------- |"   | Out-File @append
 
             foreach ($param in $item.parameters) {
-                Write-Output "| $($param.Name) | $($param.Description) | $($param.DefaultValue) |" | Out-File @append
+                Write-Output "| $($param.Name) | $($param.Description) | $($param.DefaultValue) | $($param.AllowedValues) |" | Out-File @append
             }
         }
 

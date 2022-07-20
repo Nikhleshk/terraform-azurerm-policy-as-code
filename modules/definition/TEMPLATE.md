@@ -2,20 +2,21 @@
 
 This module depends on populating `var.policy_category` and `var.policy_name` to correspond with the respective custom policy definition `json` file found in the [local library](../../policies/).
 
-> :bulb: **Note:** More information on Policy Definition Structure [can be found here](https://docs.microsoft.com/en-us/azure/governance/policy/concepts/definition-structure)
+> 💡 **Note:** More information on Policy Definition Structure [can be found here](https://docs.microsoft.com/en-us/azure/governance/policy/concepts/definition-structure)
+
+> 💡 **Note:** Specify the `policy_mode` variable if you wish to [change the mode](https://docs.microsoft.com/en-us/azure/governance/policy/concepts/definition-structure#mode) which defaults to `All`. Possible values below.
 
 ## Examples
 
-### Create a basic Policy Definition
+### Create a basic Policy Definition from a file located in the module library
 
 ```hcl
 module whitelist_regions {
   source                = "gettek/policy-as-code/azurerm//modules/definition"
-  version               = "2.3.0"
   policy_name           = "whitelist_regions"
   display_name          = "Allow resources only in whitelisted regions"
   policy_category       = "General"
-  management_group      = local.default_management_group_scope_name
+  management_group_id   = data.azurerm_management_group.org.id
 }
 ```
 
@@ -38,6 +39,37 @@ module "configure_asc" {
   display_name          = title(replace(each.key, "_", " "))
   policy_description    = each.value
   policy_category       = "Security Center"
-  management_group      = data.azurerm_management_group.org.name
+  management_group_id   = data.azurerm_management_group.org.id
+}
+```
+
+### Use definition files located outside of the module library
+
+```hcl
+module "file_path_test" {
+  source              = "..//modules/definition"
+  file_path           = "../path/to/file/onboard_to_automation_dsc_linux.json"
+  management_group_id = data.azurerm_management_group.org.id
+}
+```
+
+You will also be able to supply object properties at runtime such as:
+```hcl
+locals {
+  policy_file = jsondecode(file("onboard_to_automation_dsc_linux.json"))
+}
+
+module "parameterised_test" {
+  source              = "..//modules/definition"
+  policy_name         = "Custom Name"
+  display_name        = "Custom Display Name"
+  policy_description  = "Custom Description"
+  policy_category     = "Custom Category"
+  policy_version      = "Custom Version"
+  management_group_id = data.azurerm_management_group.org.id
+
+  policy_rule       = (local.policy_file).properties.policyRule
+  policy_parameters = (local.policy_file).properties.parameters
+  policy_metadata   = (local.policy_file).properties.metadata
 }
 ```

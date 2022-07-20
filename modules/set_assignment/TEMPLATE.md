@@ -2,27 +2,34 @@
 
 Assignments can be scoped from overarching management groups right down to individual resources
 
-> 💡 To automate Role Assignment and Remediation you must explicitly parse a list of required `role_definition_ids` to this module. Specify a `role_assignment_scope` to change role assignments to a lower scope beneath the Policy assignment.
-
-> ⚠️ **Warning:** You may experience plan/apply issues when running an initial deployment of a `set_assignment`. This is because `azurerm_role_assignment.rem_role` and `azurerm_policy_remediation.rem` depend on resources to exist before producing a successful deployment. To overcome this, set the flag `-var "skip_remediation=true"` and omit for consecutive builds. This may also be required for destroy tasks.
+> 💡 A role assignment and remediation task will be automatically created if any member definitions contain a list of `roleDefinitionIds`. This can be omitted with `skip_role_assignment = true`, or to assign roles at a different scope to that of the policy assignment use: `role_assignment_scope`. To successfully create Role-assignments (or group memberships) the deployment account may require the [User Access Administrator](https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#user-access-administrator) role at the `assignment_scope` or preferably the `definition_scope` to simplify workflows.
 
 ## Examples
 
-### Custom Policy Initiative Assignment
+### Custom Policy Initiative Assignment with Not-Scope
 ```hcl
 module org_mg_configure_asc_initiative {
   source               = "gettek/policy-as-code/azurerm//modules/set_assignment"
   initiative           = module.configure_asc_initiative.initiative
   assignment_scope     = data.azurerm_management_group.org.id
   assignment_effect    = "DeployIfNotExists"
-  skip_remediation     = var.skip_remediation
+  skip_remediation     = false
   skip_role_assignment = false
-  role_definition_ids  = module.configure_asc_initiative.role_definition_ids
+
   assignment_parameters = {
     workspaceId           = local.dummy_resource_ids.azurerm_log_analytics_workspace
     eventHubDetails       = local.dummy_resource_ids.azurerm_eventhub_namespace_authorization_rule
     securityContactsEmail = "admin@cloud.com"
     securityContactsPhone = "44897654987"
+  }
+
+  assignment_not_scopes = [
+    data.azurerm_management_group.team_a.id
+  ]
+
+  non_compliance_messages = {
+    null                      = "The Default non-compliance message for all member definitions"
+    "AutoEnrollSubscriptions" = "The non-compliance message for the auto_enroll_subscriptions definition"
   }
 }
 ```
@@ -37,6 +44,7 @@ module org_mg_cis_1_3_0_benchmark {
   source           = "gettek/policy-as-code/azurerm//modules/set_assignment"
   initiative       = data.azurerm_policy_set_definition.cis_1_3_0
   assignment_scope = data.azurerm_management_group.org.id
+
   assignment_parameters = {
     "effect-b954148f-4c11-4c38-8221-be76711e194a-MicrosoftSql-servers-firewallRules-delete" = "Disabled"
   }
@@ -58,13 +66,15 @@ module org_mg_configure_az_monitor_linux_vm_initiative {
   source           = "gettek/policy-as-code/azurerm//modules/set_assignment"
   initiative       = data.azurerm_policy_set_definition.configure_az_monitor_linux_vm_initiative
   assignment_scope = data.azurerm_management_group.org.id
-  skip_remediation = var.skip_remediation
+  skip_remediation = false
+
   role_definition_ids = [
     data.azurerm_role_definition.vm_contributor.id
   ]
+
   assignment_parameters = {
     listOfLinuxImageIdToInclude = []
-    dcrResourceId                 = "/Data/Collection/Rule/Resource/Id"
+    dcrResourceId               = "/Data/Collection/Rule/Resource/Id"
   }
 }
 ```

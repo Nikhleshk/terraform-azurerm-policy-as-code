@@ -4,15 +4,15 @@ resource azurerm_policy_set_definition set {
   description  = var.initiative_description
   policy_type  = "Custom"
 
-  management_group_id = var.management_group
+  management_group_id = var.management_group_id
 
-  metadata   = local.metadata
-  parameters = local.all_parameters
+  metadata   = jsonencode(local.metadata)
+  parameters = jsonencode(local.parameters)
 
-  dynamic "policy_definition_reference" {
+  dynamic policy_definition_reference {
     for_each = [for d in var.member_definitions : {
       id         = d.id
-      ref_id     = substr(md5("${var.initiative_name}${d.id}"), 0, 20)
+      ref_id     = replace(substr(title(replace(d.name, "/-|_|\\s/", " ")), 0, 64), "/\\s/", "")
       parameters = jsondecode(d.parameters)
       groups     = []
     }]
@@ -22,7 +22,7 @@ resource azurerm_policy_set_definition set {
       reference_id         = policy_definition_reference.value.ref_id
       parameter_values = jsonencode({
         for k in keys(policy_definition_reference.value.parameters) :
-        k => { value = "[parameters('${k}')]" }
+        k => { value = k == "effect" && var.merge_effects == false ? "[parameters('${format("%s_%s", k, policy_definition_reference.value.ref_id)}')]" : "[parameters('${k}')]" }
       })
       policy_group_names = policy_definition_reference.value.groups
     }
